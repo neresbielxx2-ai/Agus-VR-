@@ -68,7 +68,7 @@ class VrPanel(
     private var dirty = true
 
     init {
-        texture.setBitmap(bitmap)
+        texture.updateBitmap(bitmap)
         repaint()
     }
 
@@ -114,7 +114,8 @@ class VrPanel(
         texture.dirty = true
     }
 
-    fun setHovered(el: PanelElement?) {
+    /** Atualiza o elemento sob o ray (engine). Repinta apenas se mudou. */
+    fun applyHover(el: PanelElement?) {
         if (hovered !== el) {
             hovered = el
             repaint()

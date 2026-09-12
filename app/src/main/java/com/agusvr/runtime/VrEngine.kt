@@ -278,10 +278,10 @@ class VrEngine(val activity: VrActivity) {
             if (!p.item.visible || !p.target.enabled) continue
             if (hoveredTarget === p.target && point.active) {
                 val el = p.target.updateHover(point.ray)
-                p.setHovered(el)
+                p.applyHover(el)
                 p.hoverProgress = interaction.progress
             } else {
-                if (p.hovered != null) p.setHovered(null)
+                if (p.hovered != null) p.applyHover(null)
                 p.hoverProgress = 0f
             }
         }

@@ -98,15 +98,12 @@ jobs:
             echo ""
             echo "</details>"
           } > /tmp/report.md
-          NUM=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ci-build --json number --jq '.[0].number' 2>/dev/null || true)
-          if [ -n "$NUM" ]; then
+          NUM=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+                --jq '[.[] | select(.title=="CI: relatório de falha de build")] | .[0].number' 2>/dev/null || true)
+          if [ -n "$NUM" ] && [ "$NUM" != "null" ]; then
             gh issue comment "$NUM" --repo "$GITHUB_REPOSITORY" --body-file /tmp/report.md
           else
             gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "CI: relatório de falha de build" \
-              --body-file /tmp/report.md \
-              || gh issue create --repo "$GITHUB_REPOSITORY" \
-                   --title "CI: relatório de falha de build" \
-                   --label ci-build \
-                   --body-file /tmp/report.md
+              --body-file /tmp/report.md
           fi

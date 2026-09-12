@@ -76,7 +76,7 @@ class CanvasTexture {
         private set
     var dirty = false
 
-    fun setBitmap(bmp: android.graphics.Bitmap) {
+    fun updateBitmap(bmp: android.graphics.Bitmap) {
         bitmap = bmp
         dirty = true
     }
