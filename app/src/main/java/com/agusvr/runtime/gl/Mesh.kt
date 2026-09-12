@@ -144,8 +144,16 @@ object Meshes {
                 val t1 = 2.0 * PI * (s + 1) / sectors
                 val v00 = sph(phi0, t0); val v10 = sph(phi1, t0)
                 val v11 = sph(phi1, t1); val v01 = sph(phi0, t1)
-                if (r != 0) { p.addAll(v00); n.addAll(v00); p.addAll(v10); n.addAll(v10); p.addAll(v01); n.addAll(v01) }
-                if (r != rings - 1) { p.addAll(v10); n.addAll(v10); p.addAll(v11); n.addAll(v11); p.addAll(v01); n.addAll(v01) }
+                if (r != 0) {
+                    p.addAll(v00.toList()); n.addAll(v00.toList())
+                    p.addAll(v10.toList()); n.addAll(v10.toList())
+                    p.addAll(v01.toList()); n.addAll(v01.toList())
+                }
+                if (r != rings - 1) {
+                    p.addAll(v10.toList()); n.addAll(v10.toList())
+                    p.addAll(v11.toList()); n.addAll(v11.toList())
+                    p.addAll(v01.toList()); n.addAll(v01.toList())
+                }
             }
         }
         val m = Mesh()
@@ -184,8 +192,8 @@ object Meshes {
             val o1 = floatArrayOf(cos(a1).toFloat(), sin(a1).toFloat(), 0f)
             val i0 = floatArrayOf(o0[0] * inner, o0[1] * inner, 0f)
             val i1 = floatArrayOf(o1[0] * inner, o1[1] * inner, 0f)
-            p.addAll(i0); p.addAll(o0); p.addAll(o1)
-            p.addAll(i0); p.addAll(o1); p.addAll(i1)
+            p.addAll(i0.toList()); p.addAll(o0.toList()); p.addAll(o1.toList())
+            p.addAll(i0.toList()); p.addAll(o1.toList()); p.addAll(i1.toList())
             for (k in 0 until 6) n.addAll(listOf(0f, 0f, 1f))
         }
         val m = Mesh()
