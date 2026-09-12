@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- fundo -->
+    <path android:fillColor="#05070E" android:pathData="M0,0h108v108h-108z"/>
+    <!-- anel -->
+    <path android:strokeColor="#6EE7FF" android:strokeWidth="4" android:fillColor="#00000000"
+        android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0"/>
+    <!-- A -->
+    <path android:fillColor="#6EE7FF"
+        android:pathData="M54,38 L66,70 L60,70 L57,61 L51,61 L48,70 L42,70 Z M52.6,56 L55.4,56 L54,51 Z"/>
+    <!-- ponto do dedo -->
+    <path android:fillColor="#7DFFB2" android:pathData="M54,30m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+</vector>

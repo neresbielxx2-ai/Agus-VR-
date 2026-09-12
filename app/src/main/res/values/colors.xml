@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="agus_bg">#05070E</color>
+    <color name="agus_bg_card">#0B1220</color>
+    <color name="agus_bg_card_hi">#101B30</color>
+    <color name="agus_accent">#6EE7FF</color>
+    <color name="agus_accent_dim">#2A5A66</color>
+    <color name="agus_text">#E8F1F8</color>
+    <color name="agus_text_dim">#8CA0B3</color>
+    <color name="agus_ok">#7DFFB2</color>
+    <color name="agus_warn">#FFC96E</color>
+    <color name="agus_line">#1B2A44</color>
+</resources>

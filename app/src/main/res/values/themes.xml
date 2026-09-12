@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AGUS" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/agus_bg</item>
+        <item name="android:statusBarColor">@color/agus_bg</item>
+        <item name="android:navigationBarColor">@color/agus_bg</item>
+        <item name="android:colorPrimary">@color/agus_accent</item>
+        <item name="android:colorAccent">@color/agus_accent</item>
+        <item name="android:textColor">@color/agus_text</item>
+        <item name="android:textColorSecondary">@color/agus_text_dim</item>
+    </style>
+
+    <style name="Theme.AGUS.Fullscreen">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Agus VR</string>
+    <string name="start_vr">Iniciar Motor VR</string>
+    <string name="section_settings">Configurações</string>
+    <string name="opt_quality">Qualidade gráfica</string>
+    <string name="opt_resolution">Resolução</string>
+    <string name="opt_fps">FPS</string>
+    <string name="opt_hands">Hand Tracking</string>
+    <string name="opt_effects">Efeitos</string>
+    <string name="opt_sound">Som</string>
+    <string name="opt_perf">Modo desempenho / economia</string>
+    <string name="status_model">Modelo de hand tracking</string>
+    <string name="download_model">Baixar modelo</string>
+    <string name="permission_camera">Permitir câmera</string>
+</resources>
