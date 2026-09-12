@@ -27,7 +27,7 @@ class VrPanel(
     val widthM: Float,
     val heightM: Float,
     meshes: MeshSet,
-    pixelW: Int = 1024
+    val pixelW: Int = 1024
 ) {
     companion object {
         val BG = 0xEF0B1220.toInt()

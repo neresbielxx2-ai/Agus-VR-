@@ -7,9 +7,9 @@ import com.agusvr.util.Ray
  * Agus Interaction — regras de seleção por aproximação.
  *
  * Fluxo:
- *  1. Ray sobre o alvo por [HOVER_CONFIRM_MS] → alvo DETECTED (destaque).
- *  2. Palma da mão entra na janela de distância [MIN_APPROACH..selectDistance]
- *     enquanto continua apontando → progresso sobe até 1 (SELECTING).
+ *  1. Ray sobre o alvo por HOVER_CONFIRM_MS → alvo DETECTED (destaque).
+ *  2. Palma da mão entra na janela de distância (MIN_APPROACH até
+ *     selectDistance) enquanto continua apontando → progresso sobe até 1.
  *  3. Progresso completo → seleção confirmada (OPENING → ação executada).
  *
  * Anti clique-acidental:

@@ -2,6 +2,7 @@ package com.agusvr.performance
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Debug

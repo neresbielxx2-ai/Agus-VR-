@@ -446,8 +446,7 @@ class VrEngine(val activity: VrActivity) {
 
         // Chip do alvo (identifica o elemento apontado)
         val hovered = interaction.hovered
-        val showChip = hovered != null && interaction.detected && point.active
-        if (showChip) {
+        if (hovered != null && interaction.detected && point.active) {
             val label = if (interaction.progress > 0.02f)
                 "● ${hovered.hoverLabel} — aproxime a mão…"
             else

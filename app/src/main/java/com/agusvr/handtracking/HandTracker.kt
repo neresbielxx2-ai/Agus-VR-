@@ -249,7 +249,8 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
 
             projection.imageAspect = bmp.width.toFloat() / bmp.height.toFloat()
 
-            val mpImage = BitmapImageBuilder(bmp).setRotationDegrees(0).build()
+            // O bitmap já chega girado/espelhado; sem rotação adicional.
+            val mpImage = BitmapImageBuilder(bmp).build()
 
             var ts = SystemClock.elapsedRealtime()
             if (ts <= lastVideoTs) ts = lastVideoTs + 1

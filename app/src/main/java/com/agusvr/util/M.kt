@@ -4,6 +4,7 @@ import kotlin.math.sqrt
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.pow
 
 /**
  * Agus VR — utilitários matemáticos mínimos (vetores 3D e quatérnions).

@@ -73,7 +73,7 @@ object AgusBridge {
      *   "head":{"pos":[0,0,0],"rot":[w,x,y,z]},
      *   "hands":[{ "side":"L|R", "present":bool, "gesture":"POINT|...",
      *              "palm":[x,y,z],
-     *              "index":{"tip":[..],"dir":[..],"extended":bool},
+     *              "index":{"tip":[x,y,z],"dir":[x,y,z],"extended":bool},
      *              "pinch":0.21,
      *              "landmarks":[[x,y,z] × 21] }, ...],
      *   "events":[{"type":"select|grab|release","target":"id"}],
