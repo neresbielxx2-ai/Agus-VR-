@@ -214,6 +214,9 @@ class SystemApp : AgusApp {
             }
             infoPanel.repaint()
         }
+        infoPanel.addButton("reactivate_hands", "Reativar hand tracking", -0.48f, -0.78f, 0.44f, 0.14f) { _ ->
+            env.engine.forceStartHands()
+        }
         infoPanel.addButton("back", "◂ Voltar", 0.04f, -0.6f, 0.44f, 0.14f) { env.exitToMenu() }
         infoPanel.place(0f, 0.1f, -2.2f, 0f)
         env.addPanel(infoPanel)

@@ -182,8 +182,16 @@ class LauncherActivity : AppCompatActivity() {
 
         // Diagnóstico: se o motor VR caiu alguma vez, mostra o último erro
         val crashTail = com.agusvr.runtime.CrashLog.tail(this, 6)
+        val failPoint = com.agusvr.runtime.BootGuard.failurePoint
+        if (failPoint.isNotEmpty() || com.agusvr.runtime.BootGuard.safeMode) {
+            sb.append("⚠ Última sessão parou em: ").append(failPoint.ifEmpty { "?" })
+            if (com.agusvr.runtime.BootGuard.safeMode) sb.append(" — modo seguro ativo nesta sessão")
+            sb.append('\n')
+        }
         if (crashTail != null) {
             sb.append("⚠ Último erro do motor VR:\n").append(crashTail).append("\n\n")
+            showClearLogButton()
+        } else if (com.agusvr.runtime.BootGuard.safeMode) {
             showClearLogButton()
         }
         sb.append(when (status) {
@@ -220,6 +228,7 @@ class LauncherActivity : AppCompatActivity() {
         b.layoutParams = lp
         b.setOnClickListener {
             com.agusvr.runtime.CrashLog.clear(this)
+            com.agusvr.runtime.BootGuard.clearFailure(this)
             card.removeView(b)
             clearLogAdded = false
             refreshStatus()

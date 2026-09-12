@@ -77,6 +77,7 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
 
     // ---------------------------------------------------------------- frame
     private var consecutiveErrors = 0
+    private var firstFrameDone = false
 
     override fun onDrawFrame(gl: GL10?) {
         if (!initOk) {
@@ -129,6 +130,20 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
                 // Escala cheia OU FBO indisponível neste GPU → render direto
                 GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
                 renderScene(screenW, screenH)
+            }
+
+            if (!firstFrameDone) {
+                firstFrameDone = true
+                // Chegamos ao 1º frame: boot visual OK. A partir daqui o
+                // engine pode iniciar o hand tracking (fase monitorada).
+                engine.onFirstFrame()
+                try {
+                    val gpu = GLES30.glGetString(GLES30.GL_RENDERER) ?: "?"
+                    val ver = GLES30.glGetString(GLES30.GL_VERSION) ?: "?"
+                    com.agusvr.runtime.CrashLog.logMessage(
+                        engine.activity, "gl", "1º frame OK — GPU: $gpu — $ver"
+                    )
+                } catch (_: Throwable) {}
             }
         } catch (t: Throwable) {
             if (consecutiveErrors < 4) {

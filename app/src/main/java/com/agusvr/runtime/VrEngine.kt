@@ -126,6 +126,53 @@ class VrEngine(val activity: VrActivity) {
         hands.start(activity)
     }
 
+    // -------------------------------------------------- boot do hand tracking
+    /** Sessão em modo seguro (última morreu antes do 1º frame). */
+    var safeModeSession = false
+    private var handsStarted = false
+
+    /** Chamado pelo renderer quando o 1º frame renderiza com sucesso. */
+    fun onFirstFrame() {
+        BootGuard.firstFrame(activity)
+        if (!safeModeSession && !handsStarted) {
+            startHandsDeferred()
+        }
+    }
+
+    /**
+     * Inicia o pipeline de hand tracking fora da GL thread e DEPOIS do
+     * boot visual. A fase "hands.carregando" fica persistida: se o app
+     * morrer aqui (ex.: crash nativo do MediaPipe), a próxima sessão
+     * entra em modo seguro e o launcher mostra onde parou.
+     */
+    fun startHandsDeferred() {
+        handsStarted = true
+        BootGuard.mark(activity, "hands.carregando")
+        hands.onPipelineReady = { BootGuard.markHealthy(activity) }
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                hands.refreshFlags()
+                hands.start(activity)
+            } catch (t: Throwable) {
+                CrashLog.log(activity, "hands.start", t)
+            }
+        }
+    }
+
+    /** Botão "Reativar hand tracking" (app Sistema / após modo seguro). */
+    fun forceStartHands() {
+        toast("Reativando hand tracking…")
+        BootGuard.mark(activity, "hands.carregando")
+        hands.onPipelineReady = { BootGuard.markHealthy(activity) }
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                hands.restart(activity)
+            } catch (t: Throwable) {
+                CrashLog.log(activity, "hands.restart", t)
+            }
+        }
+    }
+
     fun attachRenderer(r: AgusRenderer) {
         renderer = r
     }

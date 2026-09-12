@@ -85,6 +85,9 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
     @Volatile var statusMessage = "inicializando"
         private set
 
+    /** Chamado quando o MediaPipe carregou com sucesso (fase saudável). */
+    var onPipelineReady: (() -> Unit)? = null
+
     // ---------------------------------------------------------------- setup
     fun start(lifecycleOwner: LifecycleOwner) {
         owner = lifecycleOwner
@@ -115,9 +118,11 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
         } catch (e: Throwable) {
             Log.e(TAG, "Falha ao criar HandLandmarker", e)
             statusMessage = "erro ao carregar modelo: ${e.message}"
+            com.agusvr.runtime.CrashLog.log(activity, "HandLandmarker", e)
             updateFlags()
             return
         }
+        try { onPipelineReady?.invoke() } catch (_: Throwable) {}
         main.post { bindCamera() }
     }
 

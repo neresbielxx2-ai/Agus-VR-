@@ -6,14 +6,18 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.agusvr.R
 import com.agusvr.runtime.gl.AgusRenderer
 
 /**
  * Agus VR Runtime — atividade que hospeda o motor VR.
  *
  * GLSurfaceView (GLES 3.0) + touch lateral + imersivo total.
- * O ciclo de vida da câmera acompanha esta atividade via CameraX.
+ * Boot protegido: qualquer falha é registrada (CrashLog) e, se a última
+ * sessão morreu antes do 1º frame, esta sessão entra em modo seguro
+ * (sem câmera/MediaPipe) em vez de repetir o crash.
  */
 class VrActivity : AppCompatActivity() {
 
@@ -23,57 +27,107 @@ class VrActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        immersive()
-        CrashLog.install(this)
 
-        engine = VrEngine(this)
-        engine.init()
+        BootGuard.mark(this, "activity.onCreate")
+        CrashLog.logMessage(this, "boot", "VrActivity onCreate (safeMode=${BootGuard.safeMode})")
 
-        glView = GLSurfaceView(this)
-        glView.setEGLContextClientVersion(3)
-        // Sem chooser explícito: deixa o GLSurfaceView escolher a config EGL
-        // mais compatível com o GPU do aparelho (evita "No configs match").
+        try {
+            immersive()
 
-        val renderer = AgusRenderer(engine)
-        engine.attachRenderer(renderer)
-        glView.setRenderer(renderer)
-        glView.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+            engine = VrEngine(this)
+            BootGuard.mark(this, "engine.construido")
+            engine.init()
+            BootGuard.mark(this, "engine.init")
 
-        glView.setOnTouchListener { _, ev: MotionEvent ->
-            engine.touch.onTouchEvent(ev)
-            true
+            glView = GLSurfaceView(this)
+            glView.setEGLContextClientVersion(3)
+            // Sem chooser explícito: deixa o GLSurfaceView escolher a config
+            // EGL mais compatível com o GPU do aparelho.
+
+            val renderer = AgusRenderer(engine)
+            engine.attachRenderer(renderer)
+            glView.setRenderer(renderer)
+            glView.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+
+            glView.setOnTouchListener { _, ev: MotionEvent ->
+                engine.touch.onTouchEvent(ev)
+                true
+            }
+
+            setContentView(glView)
+            BootGuard.mark(this, "glview.anexada")
+
+            // O hand tracking só inicia DEPOIS do primeiro frame renderizado
+            // (engine.onFirstFrame). Assim o menu VR sempre aparece antes, e
+            // se o pipeline de câmera/MediaPipe cair sabemos exatamente onde.
+            engine.safeModeSession = BootGuard.safeMode
+            if (BootGuard.safeMode) {
+                engine.toast(
+                    "Modo seguro: hand tracking desativado nesta sessão " +
+                    "(parou em: ${BootGuard.failurePoint.ifEmpty { BootGuard.lastPhase }})", 7000
+                )
+                CrashLog.logMessage(this, "boot", "modo seguro ativo — câmera/MediaPipe pulados")
+            }
+        } catch (t: Throwable) {
+            CrashLog.log(this, "VrActivity.onCreate", t)
+            showFatalView(t)
         }
+    }
 
-        setContentView(glView)
-
-        // Hand tracking real (câmera + MediaPipe), se disponível/permitido
-        engine.startHands()
+    private fun showFatalView(t: Throwable) {
+        try {
+            val tv = TextView(this)
+            tv.setBackgroundColor(resources.getColor(R.color.agus_bg, theme))
+            tv.setTextColor(resources.getColor(R.color.agus_text, theme))
+            tv.setPadding(48, 96, 48, 48)
+            tv.textSize = 14f
+            tv.text = "O motor VR falhou ao iniciar.\n\n" +
+                    "Erro: ${t.javaClass.simpleName}\n${t.message}\n\n" +
+                    "O diagnóstico foi salvo — abra a tela inicial do Agus VR " +
+                    "para ver os detalhes."
+            tv.setOnClickListener { finish() }
+            setContentView(tv)
+        } catch (_: Throwable) {
+            finish()
+        }
     }
 
     override fun onResume() {
         super.onResume()
         immersive()
-        glView.onResume()
-        engine.head.start()
+        try {
+            glView.onResume()
+            engine.head.start()
+        } catch (t: Throwable) {
+            CrashLog.log(this, "VrActivity.onResume", t)
+        }
     }
 
     override fun onPause() {
-        engine.head.stop()
-        glView.onPause()
+        try {
+            engine.head.stop()
+            glView.onPause()
+        } catch (t: Throwable) {
+            CrashLog.log(this, "VrActivity.onPause", t)
+        }
         super.onPause()
     }
 
     override fun onDestroy() {
-        engine.shutdown()
+        try { engine.shutdown() } catch (_: Throwable) {}
         super.onDestroy()
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        when {
-            engine.appActive -> engine.goHome()
-            engine.menuVisible -> finish()
-            else -> engine.toggleMenu()
+        try {
+            when {
+                engine.appActive -> engine.goHome()
+                engine.menuVisible -> finish()
+                else -> engine.toggleMenu()
+            }
+        } catch (_: Throwable) {
+            finish()
         }
         // Intencionalmente SEM super: navegação controlada pelo runtime.
     }
