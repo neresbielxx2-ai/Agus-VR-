@@ -60,12 +60,16 @@ class HeadTracker(context: Context) : SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type != Sensor.TYPE_ROTATION_VECTOR) return
-        SensorManager.getQuaternionFromVector(qTmp, event.values)
-        // qTmp retorna (x,y,z,w) — normalizamos para (w,x,y,z)
-        synchronized(this) {
-            qSensor[0] = qTmp[3]; qSensor[1] = qTmp[0]
-            qSensor[2] = qTmp[1]; qSensor[3] = qTmp[2]
+        try {
+            if (event.sensor.type != Sensor.TYPE_ROTATION_VECTOR) return
+            SensorManager.getQuaternionFromVector(qTmp, event.values)
+            // qTmp retorna (x,y,z,w) — normalizamos para (w,x,y,z)
+            synchronized(this) {
+                qSensor[0] = qTmp[3]; qSensor[1] = qTmp[0]
+                qSensor[2] = qTmp[1]; qSensor[3] = qTmp[2]
+            }
+        } catch (_: Throwable) {
+            // Callback de sensor roda na main thread — nunca deixar escapar.
         }
     }
 

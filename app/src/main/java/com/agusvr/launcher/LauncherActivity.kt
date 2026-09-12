@@ -180,19 +180,20 @@ class LauncherActivity : AppCompatActivity() {
         val status = HandModelManager.status(this)
         val sb = StringBuilder()
 
-        // Diagnóstico: se o motor VR caiu alguma vez, mostra o último erro
-        val crashTail = com.agusvr.runtime.CrashLog.tail(this, 6)
+        // Diagnóstico: se o motor VR caiu alguma vez, mostra o erro completo
+        // (começa pela exceção, não pelo fim da pilha).
+        val crashFull = com.agusvr.runtime.CrashLog.readAll(this)
         val failPoint = com.agusvr.runtime.BootGuard.failurePoint
         if (failPoint.isNotEmpty() || com.agusvr.runtime.BootGuard.safeMode) {
             sb.append("⚠ Última sessão parou em: ").append(failPoint.ifEmpty { "?" })
             if (com.agusvr.runtime.BootGuard.safeMode) sb.append(" — modo seguro ativo nesta sessão")
             sb.append('\n')
         }
-        if (crashTail != null) {
-            sb.append("⚠ Último erro do motor VR:\n").append(crashTail).append("\n\n")
-            showClearLogButton()
+        if (crashFull != null) {
+            sb.append("⚠ Diagnóstico do motor VR:\n").append(crashFull).append("\n\n")
+            showLogButtons(crashFull)
         } else if (com.agusvr.runtime.BootGuard.safeMode) {
-            showClearLogButton()
+            showLogButtons(null)
         }
         sb.append(when (status) {
             is HandModelManager.Status.Ready -> "✔ Modelo de hand tracking pronto"
@@ -211,12 +212,36 @@ class LauncherActivity : AppCompatActivity() {
         txtStatus.text = sb.toString()
     }
 
-    private var clearLogAdded = false
+    private var logButtonsAdded = false
 
-    private fun showClearLogButton() {
-        if (clearLogAdded) return
-        clearLogAdded = true
+    private fun showLogButtons(fullLog: String?) {
+        if (logButtonsAdded) return
+        logButtonsAdded = true
         val card = findViewById<LinearLayout>(R.id.cardStatus)
+
+        if (fullLog != null) {
+            val copy = Button(this)
+            copy.text = "Copiar log completo"
+            copy.textSize = 12f
+            copy.setTextColor(resources.getColor(R.color.agus_text, theme))
+            copy.setBackgroundResource(R.drawable.bg_chip)
+            copy.stateListAnimator = null
+            val lpC = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(40))
+            lpC.topMargin = dp(10)
+            copy.layoutParams = lpC
+            copy.setOnClickListener {
+                try {
+                    val phase = com.agusvr.runtime.BootGuard.failurePoint
+                    val text = "Agus VR — diagnóstico\nParou em: ${phase.ifEmpty { "?" }}\n\n$fullLog"
+                    val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                            as android.content.ClipboardManager
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("agus_log", text))
+                    copy.text = "✔ Copiado — cole no chat"
+                } catch (_: Throwable) {}
+            }
+            card.addView(copy)
+        }
+
         val b = Button(this)
         b.text = "Limpar log de erro"
         b.textSize = 12f
@@ -229,9 +254,7 @@ class LauncherActivity : AppCompatActivity() {
         b.setOnClickListener {
             com.agusvr.runtime.CrashLog.clear(this)
             com.agusvr.runtime.BootGuard.clearFailure(this)
-            card.removeView(b)
-            clearLogAdded = false
-            refreshStatus()
+            recreate() // reconstroi a tela limpa
         }
         card.addView(b)
     }
