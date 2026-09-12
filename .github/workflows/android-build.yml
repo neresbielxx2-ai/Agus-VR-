@@ -8,6 +8,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   build:
     name: Compilar APK (debug + release)
@@ -19,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: JDK 17 (obrigatório para AGP 8.x)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -30,7 +34,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.4'
-          cache-read-only: false
 
       - name: Aceitar licenças e garantir platform 34 + build-tools
         run: |
@@ -52,7 +55,9 @@ jobs:
           fi
 
       - name: Compilar APK debug
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
         env:
           GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g
 
@@ -73,3 +78,35 @@ jobs:
             dist/AgusVR-debug.apk
             dist/AgusVR-release-unsigned.apk
           retention-days: 30
+
+      # Se o build falhar, publica o trecho relevante do log em uma issue
+      # (os logs do Actions nem sempre estão acessíveis fora do GitHub).
+      - name: Reportar falha em issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### Build falhou em \`${GITHUB_SHA}\`"
+            echo ""
+            echo "<details><summary>Últimas linhas do Gradle</summary>"
+            echo ""
+            echo '```'
+            grep -nE "e: |error:|FAILURE|What went wrong|Caused by|\.kt:" /tmp/gradle-build.log | head -80 \
+              || tail -n 60 /tmp/gradle-build.log 2>/dev/null || echo "(sem log capturado)"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > /tmp/report.md
+          NUM=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ci-build --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --repo "$GITHUB_REPOSITORY" --body-file /tmp/report.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "CI: relatório de falha de build" \
+              --body-file /tmp/report.md \
+              || gh issue create --repo "$GITHUB_REPOSITORY" \
+                   --title "CI: relatório de falha de build" \
+                   --label ci-build \
+                   --body-file /tmp/report.md
+          fi
