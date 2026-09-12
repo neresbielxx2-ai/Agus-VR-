@@ -32,15 +32,29 @@ jobs:
           gradle-version: '8.4'
           cache-read-only: false
 
-      - name: Aceitar licenças do Android SDK
-        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
-
-      - name: Garantir platform 34 + build-tools
+      - name: Aceitar licenças e garantir platform 34 + build-tools
         run: |
-          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          SDKMGR=""
+          if command -v sdkmanager >/dev/null 2>&1; then
+            SDKMGR="sdkmanager"
+          elif [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMGR="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          else
+            SDKMGR="$(find "${ANDROID_HOME}" -name sdkmanager -type f 2>/dev/null | head -1 || true)"
+          fi
+          if [ -n "${SDKMGR}" ]; then
+            echo "usando ${SDKMGR}"
+            yes | "${SDKMGR}" --licenses > /dev/null 2>&1 || true
+            "${SDKMGR}" --install "platforms;android-34" "build-tools;34.0.0" \
+              || echo "::warning::instalação via sdkmanager falhou; AGP tentará baixar sozinho"
+          else
+            echo "::warning::sdkmanager não encontrado; confiando no auto-download do AGP"
+          fi
 
       - name: Compilar APK debug
         run: gradle :app:assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g
 
       - name: Compilar APK release (não minificado)
         run: gradle :app:assembleRelease --no-daemon
