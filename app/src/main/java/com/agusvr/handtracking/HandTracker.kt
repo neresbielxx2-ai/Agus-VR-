@@ -112,7 +112,7 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
                 .setNumHands(2)
                 .build()
             landmarker = HandLandmarker.createFromOptions(activity, options)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Falha ao criar HandLandmarker", e)
             statusMessage = "erro ao carregar modelo: ${e.message}"
             updateFlags()
@@ -136,13 +136,13 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
                     val p = future.get()
                     provider = p
                     bindUseCases()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e(TAG, "CameraProvider falhou", e)
                     statusMessage = "câmera indisponível: ${e.message}"
                     updateFlags()
                 }
             }, main::post)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             statusMessage = "câmera indisponível"
             updateFlags()
         }
@@ -173,7 +173,7 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
                     val surface = android.view.Surface(st)
                     previewSurface = surface
                     request.provideSurface(surface, { r -> r.run() }) { }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e(TAG, "provideSurface falhou", e)
                 }
             }
@@ -185,7 +185,7 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
             p.bindToLifecycle(o, selector, *useCases.toTypedArray())
             statusMessage = "rastreamento ativo"
             updateFlags()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "bind falhou", e)
             statusMessage = "câmera em uso por outro app?"
             updateFlags()
@@ -325,7 +325,7 @@ class HandTracker(private val activity: Activity, private val settings: () -> Se
                     st.lastSeenMs = nowElapsed
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "detecção falhou", e)
         } finally {
             proxy.close()

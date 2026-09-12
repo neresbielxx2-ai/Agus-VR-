@@ -179,6 +179,13 @@ class LauncherActivity : AppCompatActivity() {
                     PackageManager.PERMISSION_GRANTED
         val status = HandModelManager.status(this)
         val sb = StringBuilder()
+
+        // Diagnóstico: se o motor VR caiu alguma vez, mostra o último erro
+        val crashTail = com.agusvr.runtime.CrashLog.tail(this, 6)
+        if (crashTail != null) {
+            sb.append("⚠ Último erro do motor VR:\n").append(crashTail).append("\n\n")
+            showClearLogButton()
+        }
         sb.append(when (status) {
             is HandModelManager.Status.Ready -> "✔ Modelo de hand tracking pronto"
             is HandModelManager.Status.Downloading -> "⬇ Baixando modelo…"
@@ -194,6 +201,30 @@ class LauncherActivity : AppCompatActivity() {
             sb.append("\nSem eles o VR usa fallback: gaze + toque (documentado).")
         }
         txtStatus.text = sb.toString()
+    }
+
+    private var clearLogAdded = false
+
+    private fun showClearLogButton() {
+        if (clearLogAdded) return
+        clearLogAdded = true
+        val card = findViewById<LinearLayout>(R.id.cardStatus)
+        val b = Button(this)
+        b.text = "Limpar log de erro"
+        b.textSize = 12f
+        b.setTextColor(resources.getColor(R.color.agus_warn, theme))
+        b.setBackgroundResource(R.drawable.bg_chip)
+        b.stateListAnimator = null
+        val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(40))
+        lp.topMargin = dp(10)
+        b.layoutParams = lp
+        b.setOnClickListener {
+            com.agusvr.runtime.CrashLog.clear(this)
+            card.removeView(b)
+            clearLogAdded = false
+            refreshStatus()
+        }
+        card.addView(b)
     }
 
     private fun downloadModel() {

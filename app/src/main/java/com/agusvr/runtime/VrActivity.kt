@@ -24,13 +24,15 @@ class VrActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         immersive()
+        CrashLog.install(this)
 
         engine = VrEngine(this)
         engine.init()
 
         glView = GLSurfaceView(this)
         glView.setEGLContextClientVersion(3)
-        glView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        // Sem chooser explícito: deixa o GLSurfaceView escolher a config EGL
+        // mais compatível com o GPU do aparelho (evita "No configs match").
 
         val renderer = AgusRenderer(engine)
         engine.attachRenderer(renderer)

@@ -191,6 +191,10 @@ class VrEngine(val activity: VrActivity) {
             p.item.visible = false
             p.registerTo(transparent, textures)
         }
+        // Overlays nunca são alvo do ray (estão colados na visão)
+        toastPanel.target.enabled = false
+        targetChip.target.enabled = false
+        hudPanel.target.enabled = false
         panels.add(toastPanel); panels.add(targetChip); panels.add(hudPanel)
 
         apps = AppManager(this)
@@ -221,8 +225,32 @@ class VrEngine(val activity: VrActivity) {
         glReady = true
     }
 
+    /** Falha fatal na inicialização GL — registrada e exibida, sem fechar. */
+    fun onGlFatal(msg: String) {
+        glError = msg
+        CrashLog.logMessage(activity, "GL", msg)
+        try { toast("Erro: $msg — veja detalhes na tela inicial", 15000) } catch (_: Throwable) {}
+    }
+
+    var glError: String? = null
+        private set
+
     // --------------------------------------------------------------- tick
     fun tick(dtMs: Float) {
+        try {
+            tickInternal(dtMs)
+        } catch (t: Throwable) {
+            // Um subsistema com erro não pode derrubar o motor inteiro.
+            if (lastTickError != t.javaClass.name + t.message) {
+                lastTickError = t.javaClass.name + t.message
+                CrashLog.log(activity, "tick", t)
+            }
+        }
+    }
+
+    private var lastTickError: String? = null
+
+    private fun tickInternal(dtMs: Float) {
         timeSec += dtMs / 1000f
         head.update()
 

@@ -27,7 +27,15 @@ class Programs {
         lit = link(VS_LIT, FS_LIT)
         unlit = link(VS_UNLIT, FS_UNLIT)
         tex = link(VS_TEX, FS_TEX)
-        ext = link(VS_TEX, FS_EXT)
+        // O programa de passthrough depende de extensão específica do driver
+        // (GL_OES_EGL_image_external_essl3). Se não existir, o app segue sem
+        // passthrough — jamais deve fechar por isso.
+        ext = try {
+            link(VS_TEX, FS_EXT)
+        } catch (e: Throwable) {
+            Log.w("AgusGL", "Shader de passthrough indisponível neste GPU: ${e.message}")
+            0
+        }
 
         litMvp = GLES30.glGetUniformLocation(lit, "uMVP")
         litModel = GLES30.glGetUniformLocation(lit, "uModel")
@@ -45,10 +53,12 @@ class Programs {
         texSampler = GLES30.glGetUniformLocation(tex, "uTex")
         texAlpha = GLES30.glGetUniformLocation(tex, "uAlpha")
 
-        extMvp = GLES30.glGetUniformLocation(ext, "uMVP")
-        extSampler = GLES30.glGetUniformLocation(ext, "uTex")
-        extAlpha = GLES30.glGetUniformLocation(ext, "uAlpha")
-        extTexMat = GLES30.glGetUniformLocation(ext, "uTexMat")
+        if (ext != 0) {
+            extMvp = GLES30.glGetUniformLocation(ext, "uMVP")
+            extSampler = GLES30.glGetUniformLocation(ext, "uTex")
+            extAlpha = GLES30.glGetUniformLocation(ext, "uAlpha")
+            extTexMat = GLES30.glGetUniformLocation(ext, "uTexMat")
+        }
     }
 
     private fun shader(type: Int, src: String): Int {

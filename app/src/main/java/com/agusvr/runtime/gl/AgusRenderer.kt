@@ -48,14 +48,24 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
     var fpsCap = 0
 
     // ------------------------------------------------------------------ init
+    var initOk = false
+        private set
+
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES30.glClearColor(0.02f, 0.03f, 0.06f, 1f)
-        GLES30.glEnable(GLES30.GL_DEPTH_TEST)
-        GLES30.glDepthFunc(GLES30.GL_LEQUAL)
-        programs.compile()
-        meshes = MeshSet()
-        meshes.uploadAll()
-        engine.onGlReady()
+        // Nenhuma exceção pode derrubar a GL thread (fecharia o app).
+        try {
+            GLES30.glClearColor(0.02f, 0.03f, 0.06f, 1f)
+            GLES30.glEnable(GLES30.GL_DEPTH_TEST)
+            GLES30.glDepthFunc(GLES30.GL_LEQUAL)
+            programs.compile()
+            meshes = MeshSet()
+            meshes.uploadAll()
+            engine.onGlReady()
+            initOk = true
+        } catch (t: Throwable) {
+            com.agusvr.runtime.CrashLog.log(engine.activity, "onSurfaceCreated", t)
+            engine.onGlFatal("Falha ao iniciar o motor GL: ${t.message}")
+        }
         lastFrameNs = System.nanoTime()
     }
 
@@ -65,10 +75,21 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
         fbo.release()
     }
 
-    // ------------------------------------------------ frame
+    // ---------------------------------------------------------------- frame
+    private var consecutiveErrors = 0
+
     override fun onDrawFrame(gl: GL10?) {
+        if (!initOk) {
+            // Motor GL não inicializou: apenas limpa a tela (sem crash).
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
+            return
+        }
         // Upload de texturas de UI pendentes (canvas → GPU)
-        for (t in engine.textures) t.uploadIfNeeded()
+        try {
+            for (t in engine.textures) t.uploadIfNeeded()
+        } catch (t: Throwable) {
+            com.agusvr.runtime.CrashLog.log(engine.activity, "texturas", t)
+        }
 
         val now = System.nanoTime()
         var dtMs = (now - lastFrameNs) / 1_000_000f
@@ -85,20 +106,36 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
             }
         }
 
-        engine.tick(dtMs)
+        try {
+            engine.tick(dtMs)
+            consecutiveErrors = 0
+        } catch (t: Throwable) {
+            consecutiveErrors++
+            if (consecutiveErrors < 4) {
+                com.agusvr.runtime.CrashLog.log(engine.activity, "tick", t)
+            }
+        }
 
-        val scale = renderScale.coerceIn(0.4f, 1.0f)
-        val fw = ((screenW * scale).toInt()).coerceAtLeast(64)
-        val fh = ((screenH * scale).toInt()).coerceAtLeast(64)
+        try {
+            val scale = renderScale.coerceIn(0.4f, 1.0f)
+            val fw = ((screenW * scale).toInt()).coerceAtLeast(64)
+            val fh = ((screenH * scale).toInt()).coerceAtLeast(64)
 
-        if (scale < 0.999f) {
-            fbo.ensure(fw, fh)
-            fbo.bind()
-            renderScene(fw, fh)
-            fbo.blitToScreen(screenW, screenH)
-        } else {
+            if (scale < 0.999f && fbo.ensure(fw, fh)) {
+                fbo.bind()
+                renderScene(fw, fh)
+                fbo.blitToScreen(screenW, screenH)
+            } else {
+                // Escala cheia OU FBO indisponível neste GPU → render direto
+                GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+                renderScene(screenW, screenH)
+            }
+        } catch (t: Throwable) {
+            if (consecutiveErrors < 4) {
+                com.agusvr.runtime.CrashLog.log(engine.activity, "render", t)
+            }
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-            renderScene(screenW, screenH)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
         }
     }
 
@@ -225,6 +262,7 @@ class AgusRenderer(private val engine: VrEngine) : GLSurfaceView.Renderer {
     }
 
     private fun drawPassthrough() {
+        if (programs.ext == 0) return  // GPU sem a extensão: segue sem fundo de câmera
         GLES30.glUseProgram(programs.ext)
         // Quad em NDC cobrindo a tela inteira
         Matrix.setIdentityM(mvp, 0)
@@ -279,9 +317,11 @@ class ScaledFbo {
     private var depth = 0
     private var w = 0
     private var h = 0
+    private var complete = false
 
-    fun ensure(nw: Int, nh: Int) {
-        if (fbo != 0 && w == nw && h == nh) return
+    /** Cria/redimensiona o FBO. Retorna false se incompleto (fallback p/ render direto). */
+    fun ensure(nw: Int, nh: Int): Boolean {
+        if (fbo != 0 && w == nw && h == nh) return complete
         release()
         w = nw; h = nh
         val out = IntArray(1)
@@ -302,7 +342,10 @@ class ScaledFbo {
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fbo)
         GLES30.glFramebufferTexture2D(GLES30.GL_FRAMEBUFFER, GLES30.GL_COLOR_ATTACHMENT0, GLES30.GL_TEXTURE_2D, tex, 0)
         GLES30.glFramebufferRenderbuffer(GLES30.GL_FRAMEBUFFER, GLES30.GL_DEPTH_ATTACHMENT, GLES30.GL_RENDERBUFFER, depth)
+        complete = GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER) == GLES30.GL_FRAMEBUFFER_COMPLETE
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        if (!complete) release()
+        return complete
     }
 
     fun bind() {
@@ -319,6 +362,6 @@ class ScaledFbo {
         if (fbo != 0) GLES30.glDeleteFramebuffers(1, intArrayOf(fbo), 0)
         if (tex != 0) GLES30.glDeleteTextures(1, intArrayOf(tex), 0)
         if (depth != 0) GLES30.glDeleteRenderbuffers(1, intArrayOf(depth), 0)
-        fbo = 0; tex = 0; depth = 0; w = 0; h = 0
+        fbo = 0; tex = 0; depth = 0; w = 0; h = 0; complete = false
     }
 }

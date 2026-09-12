@@ -41,12 +41,16 @@ class HeadTracker(context: Context) : SensorEventListener {
     val right = floatArrayOf(1f, 0f, 0f)
 
     fun start() {
-        sensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-        val s = sensor
-        if (s != null) {
-            available = true
-            sm.registerListener(this, s, SensorManager.SENSOR_DELAY_GAME)
-        } else {
+        try {
+            sensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+            val s = sensor
+            if (s != null) {
+                available = true
+                sm.registerListener(this, s, SensorManager.SENSOR_DELAY_GAME)
+            } else {
+                available = false
+            }
+        } catch (t: Throwable) {
             available = false
         }
     }
