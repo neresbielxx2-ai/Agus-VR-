@@ -1,0 +1,61 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - main
+      - arena/01a09621-agus-vr
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilar APK (debug + release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 (obrigatório para AGP 8.x)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Instala o Gradle 8.4 diretamente (o wrapper .jar não é versionado
+      # neste repositório; a action também faz cache de dependências).
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+          cache-read-only: false
+
+      - name: Aceitar licenças do Android SDK
+        run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Garantir platform 34 + build-tools
+        run: |
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Compilar APK debug
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Compilar APK release (não minificado)
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Renomear artefatos com versão
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/AgusVR-debug.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk dist/AgusVR-release-unsigned.apk
+
+      - name: Publicar APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: agus-vr-apks
+          path: |
+            dist/AgusVR-debug.apk
+            dist/AgusVR-release-unsigned.apk
+          retention-days: 30

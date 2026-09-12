@@ -1,5 +1,7 @@
 # Agus VR
 
+![Android Build](https://github.com/neresbielxx2-ai/Agus-VR-/actions/workflows/android-build.yml/badge.svg)
+
 Sistema de realidade virtual para Android com **hand tracking real**,
 interação espacial e UI própria — construído do zero, sem depender de SDK
 proprietário de headset. O celular vira o headset (modo side-by-side
@@ -53,6 +55,14 @@ cd Agus-VR-
 gradle wrapper --gradle-version 8.4   # ou abra direto no Android Studio
 ./gradlew :app:installDebug
 ```
+
+### Build automático (GitHub Actions)
+
+Toda push em `main` / `arena/01a09621-agus-vr` compila o app na nuvem
+(`.github/workflows/android-build.yml`): JDK 17 + Gradle 8.4 + SDK 34,
+gerando **AgusVR-debug.apk** (instalável direto) e o release sem assinatura
+como artefatos da aba **Actions → Android Build**. Para disparar
+manualmente: Actions → Android Build → *Run workflow*.
 
 ### Primeiro uso
 
