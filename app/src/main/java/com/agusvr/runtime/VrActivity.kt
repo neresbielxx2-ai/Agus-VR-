@@ -32,8 +32,6 @@ class VrActivity : AppCompatActivity() {
         CrashLog.logMessage(this, "boot", "VrActivity onCreate (safeMode=${BootGuard.safeMode})")
 
         try {
-            immersive()
-
             engine = VrEngine(this)
             BootGuard.mark(this, "engine.construido")
             engine.init()
@@ -54,8 +52,13 @@ class VrActivity : AppCompatActivity() {
                 true
             }
 
+            // IMPORTANTE: setContentView ANTES de immersive(). O modo
+            // imersivo usa window.insetsController, que exige o DecorView
+            // já criado — chamá-lo antes do setContentView dava
+            // NullPointerException no Android 11+.
             setContentView(glView)
             BootGuard.mark(this, "glview.anexada")
+            immersive()
 
             // O hand tracking só inicia DEPOIS do primeiro frame renderizado
             // (engine.onFirstFrame). Assim o menu VR sempre aparece antes, e
@@ -94,10 +97,10 @@ class VrActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        immersive()
         try {
-            glView.onResume()
-            engine.head.start()
+            immersive()
+            if (::glView.isInitialized) glView.onResume()
+            if (::engine.isInitialized) engine.head.start()
         } catch (t: Throwable) {
             CrashLog.log(this, "VrActivity.onResume", t)
         }
@@ -105,8 +108,8 @@ class VrActivity : AppCompatActivity() {
 
     override fun onPause() {
         try {
-            engine.head.stop()
-            glView.onPause()
+            if (::engine.isInitialized) engine.head.stop()
+            if (::glView.isInitialized) glView.onPause()
         } catch (t: Throwable) {
             CrashLog.log(this, "VrActivity.onPause", t)
         }
@@ -114,40 +117,49 @@ class VrActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        try { engine.shutdown() } catch (_: Throwable) {}
+        try { if (::engine.isInitialized) engine.shutdown() } catch (_: Throwable) {}
         super.onDestroy()
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         try {
-            when {
-                engine.appActive -> engine.goHome()
-                engine.menuVisible -> finish()
-                else -> engine.toggleMenu()
+            if (::engine.isInitialized) {
+                when {
+                    engine.appActive -> engine.goHome()
+                    engine.menuVisible -> finish()
+                    else -> engine.toggleMenu()
+                }
+                return
             }
-        } catch (_: Throwable) {
-            finish()
-        }
+        } catch (_: Throwable) {}
+        finish()
         // Intencionalmente SEM super: navegação controlada pelo runtime.
     }
 
     private fun immersive() {
-        if (Build.VERSION.SDK_INT >= 30) {
-            window.insetsController?.let {
-                it.hide(android.view.WindowInsets.Type.systemBars())
-                it.systemBarsBehavior =
-                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        try {
+            // Garante que o DecorView exista antes de tocar nos insets —
+            // insetsController sem DecorView dá NPE no Android 11+.
+            window.decorView
+            if (Build.VERSION.SDK_INT >= 30) {
+                window.insetsController?.let {
+                    it.hide(android.view.WindowInsets.Type.systemBars())
+                    it.systemBarsBehavior =
+                        android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
             }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            or View.SYSTEM_UI_FLAG_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+        } catch (_: Throwable) {
+            // Modo imersivo é cosmético — nunca deve derrubar o motor.
         }
     }
 }
